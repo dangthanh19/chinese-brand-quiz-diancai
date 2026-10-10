@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>餐饮点餐 · 口味定制 Flashcard Set</title>
+<style>
+  :root{
+    --bg:#1F1B16;
+    --card:#F7F1E3;
+    --ink:#2B2620;
+    --sub:#6B6155;
+    --sugar:#F2C94C;
+    --ice:#56CCF2;
+ --spicy:#EB5757;
+    --green:#27AE60;
+    --accent:#FFB86B;
+    --shadow:0 18px 40px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;}
+  body{margin:0;background:linear-gradient(rgba(20,10,5,.45),rgba(20,10,5,.45)),url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6YbyLkwx3HFj0lWiGoNhaCh9Jr3jc1QiRtUs8osAk1g&s=10") center/cover no-repeat fixed;padding:0;color:var(--ink);display:flex;align-items:center;justify-content:center;width:100vw;height:100vh;overflow:hidden;}
+/* ===== 第8页：点餐挑战游戏 ===== */ 
+.game-page { display: none; width: 100%; height: 100%; padding: 24px; align-items: center; justify-content: center; } .game-page.active { display: flex; } .game-box { width: 100%; height: 100%; padding: 28px 36px; border-radius: 22px; background: rgba(247, 241, 227, 0.96); box-shadow: var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 14px; overflow-y: auto; } 
+.game-title { font-size: 34px; font-weight: 800; text-align: center; } 
+.game-progress { font-size: 18px; color: var(--sub); font-weight: 700; } 
+.game-food { font-size: 76px; line-height: 1.2; text-align: center; } 
+.game-question { font-size: 23px; font-weight: 700; text-align: center; line-height: 1.5; } 
+.game-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 950px; } 
+.game-option { padding: 15px 18px; border: 2px solid #D8C8A9; border-radius: 14px; background: #FFFDF7; color: var(--ink); font-size: 19px; font-weight: 700; cursor: pointer; text-align: center; } 
+.game-option:hover { background: #FFF0CE; } 
+.game-option.correct { background: #D7F5DF; border-color: #27AE60; } 
+.game-option.wrong { background: #FFE0E0; border-color: #EB5757; } 
+.game-feedback { min-height: 30px; font-size: 19px; font-weight: 800; text-align: center; } 
+.game-next { padding: 12px 28px; border: none; border-radius: 10px; background: var(--accent); color: var(--ink); font-size: 18px; font-weight: 800; cursor: pointer; } @media (max-width: 700px) { .game-box { padding: 18px; } .game-title { font-size: 26px; } .game-question { font-size: 18px; } .game-options { grid-template-columns: 1fr; } 
+.game-option { font-size: 16px; } }
+  /* ===== 页面容器 ===== */
+.page-container{width:min(96vw,calc(100vh * 16 / 9));height:auto;aspect-ratio:16/9;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+  /* ===== 单张卡片页面 ===== */
+  .page{
+    display:none;
+    width:100%;height:100%;
+    align-items:center;justify-content:center;
+    padding:24px;
+  }
+  .page.active{
+    display:flex;
+  }
+
+  /* ===== 16:9 card（放大版）===== */
+  .card{width:100%;height:100%;max-width:none;aspect-ratio:auto;background:rgba(247,241,227,.72);border-radius:22px;box-shadow:var(--shadow);position:relative;overflow:hidden;cursor:pointer;perspective:1200px}
+  .card-inner{position:absolute;inset:0;transition:transform .6s;transform-style:preserve-3d;}
+  .card.flipped .card-inner{transform:rotateY(180deg);}
+  .face{position:absolute;inset:0;backface-visibility:hidden;padding:28px 36px;display:flex;gap:28px;}
+  .back{transform:rotateY(180deg);background:#FFF8E7;align-items:center;justify-content:center;flex-direction:column;}
+
+  /* ===== 倒计时条 ===== */
+ .countdown{position:absolute;top:0;left:0;height:6px;width:100%;background:#EADFCB;z-index:5;}
+  .countdown::after{content:"";position:absolute;left:0;top:0;height:100%;width:100%;
+    background:linear-gradient(90deg,var(--accent),var(--spicy));animation:count 3s linear forwards;border-radius:0 4px 4px 0;}@keyframes count{from{width:100%}to{width:0%}}
+
+  /* ===== 图片占位 ===== */
+  .img-box{
+    width:42%;min-width:42%;background:#E7DCC4;border:2px dashed #C9B99A;
+    border-radius:18px;display:flex;align-items:center;justify-content:center;
+    color:var(--sub);font-size:15px;text-align:center;position:relative;overflow:hidden;}
+  .img-box img{width:100%;height:100%;object-fit:cover;display:none;}
+  .img-box.has-img img{display:block;}
+  .img-box.has-img .ph{display:none;}
+
+  /* ===== 右侧内容 ===== */
+  .content{flex:1;display:flex;flex-direction:column;gap:14px;min-width:0;justify-content:center;}
+  .title{font-size:60px;font-weight:800;line-height:1.2; }
+  .pinyin{font-size:40px;color:var(--sub);font-style:italic;margin-top:4px;}
+  .badges{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:16px;margin-top:20px;width:100%;}
+  .badge{font-size:26px;font-weight:800;padding:16px 28px;border-radius:18px;color:#1F1B16;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
+  .b-sugar{background:#D9A900;color:#fff;}
+  .b-ice{background:#2584C6;color:#fff;}
+  .b-spicy{background:#EB5757;color:#fff;}
+  .b-sour{background:#9B59B6;color:#fff;}
+  .b-green{background:var(--green);color:#fff;}
+  .b-oil{background:#C99700;color:#fff;}
+  .hint{font-size:18px;font-weight:600;color:#8A5A20;background:#FFF3D6;border:2px solid #E8B96A;border-radius:14px;padding:11px 20px;margin-top:14px;text-align:center;width:100%;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+  
+  /* ===== 背面 ===== */
+  .target-label{font-size:50px;font-weight:800;letter-spacing:3px;color:#D35400; margin-bottom:18px;text-align:center;transform:translateY(-20px);}
+  .target-sentence{font-size:50px;font-weight:800;margin-bottom:18px;text-align:center;transform:translateY(-20px);}
+  .flip-tip{position:absolute;bottom:14px;right:20px;font-size:14px;color:var(--sub);}
+
+  /* ===== 教师提示区（第7页）===== */
+  .teacher-page{
+    display:none;
+    width:100%;height:100%;
+    align-items:center;justify-content:center;
+    padding:24px;
+  }
+  .teacher-page.active{display:flex;}
+  .teacher{
+    width:100%;max-width:1100px;
+    background:#2B2620;color:#F7F1E3;
+    border-radius:22px;padding:36px 44px;font-size:18px;line-height:1.9;
+    border:1px solid #443C32;
+    aspect-ratio:16/9;overflow-y:auto;
+  }
+  .teacher h3{margin:0 0 14px;font-size:24px;color:var(--accent);}
+  .teacher code{background:#3a342b;padding:3px 8px;border-radius:6px;color:#FFD8A8;font-size:16px;}
+
+  /* ===== 导航按钮 ===== */
+  .nav-bar{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    display:flex;gap:16px;align-items:center;z-index:100;
+  }
+  .nav-btn{
+    background:var(--accent);color:#1F1B16;border:none;
+    padding:12px 28px;border-radius:10px;font-size:16px;font-weight:700;
+    cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);
+    transition:transform .15s,box-shadow .15s;
+  }
+  .nav-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4);}
+  .nav-btn:active{transform:translateY(0);}
+  .nav-btn:disabled{opacity:.35;cursor:default;transform:none;}
+  .page-indicator{
+    color:#F7F1E3;font-size:15px;font-weight:600;
+    background:rgba(0,0,0,.4);padding:8px 18px;border-radius:8px;
+    min-width:80px;text-align:center;
+  }
+
+  /* ===== 翻牌时重置倒计时动画 ===== */
+  .card.flipped .countdown::after{
+    animation:none;
+  }
+
+  /* ===== 封面页 ===== */
+  .cover-page { background: rgba(31,27,22,.12); }
+  .cover-panel {
+    width:100%; height:100%; border-radius:22px; overflow:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:42px; color:#FFF8E7;
+    background:linear-gradient(135deg,rgba(31,27,22,.94),rgba(91,53,28,.88));
+    border:1px solid rgba(255,255,255,.18); box-shadow:var(--shadow); position:relative;
+  }
+  .cover-kicker { font-size:clamp(15px,1.5vw,22px); letter-spacing:5px; color:#FFB86B; font-weight:800; margin-bottom:18px; }
+  .cover-title { font-size:clamp(38px,5vw,76px); font-weight:900; line-height:1.2; margin:0 0 16px; }
+  .cover-subtitle { font-size:clamp(18px,2vw,30px); line-height:1.5; color:#F7F1E3; margin-bottom:22px; }
+  .cover-tags { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin:8px 0 30px; }
+  .cover-tag { background:rgba(255,184,107,.15); border:1px solid rgba(255,184,107,.65); color:#FFE0B2; border-radius:999px; padding:9px 18px; font-size:clamp(14px,1.2vw,18px); font-weight:700; }
+  .cover-start { border:0; border-radius:12px; padding:14px 30px; background:#FFB86B; color:#2B2620; font-size:clamp(16px,1.4vw,21px); font-weight:900; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .cover-start:hover { transform:translateY(-2px); }
+  .cover-note { margin-top:20px; color:#D9CDBB; font-size:14px; }
+  /* ===== 六张纯图片页：只需替换图片 URL ===== */
+  .image-only-page { background:rgba(31,27,22,.08); }
+  .image-only-frame { width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:18px; background:rgba(247,241,227,.92); box-shadow:var(--shadow); }
+  .image-only-frame img { display:block; width:100%; height:100%; object-fit:contain; }
+  @media (max-width:700px) {
+    .page { padding:10px; }
+    .cover-panel { padding:20px; }
+    .cover-kicker { letter-spacing:2px; }
+    .cover-tags { gap:7px; margin-bottom:20px; }
+    .cover-tag { padding:7px 11px; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ===== 封面页 ===== -->
+<div class="page cover-page" id="page-cover">
+  <div class="cover-panel">
+    <div class="cover-kicker">中文课堂 · INTERACTIVE LESSON</div>
+    <h1 class="cover-title">餐饮点餐 · 口味定制</h1>
+    <div class="cover-subtitle">Ordering Food &amp; Customizing Flavors</div>
+    <div class="cover-tags">
+      <span class="cover-tag">🍹 饮料甜度与冰量</span>
+      <span class="cover-tag">🌶️ 菜品口味定制</span>
+      <span class="cover-tag">🥩 牛排熟度</span>
+    </div>
+    <button class="cover-start" onclick="startPresentation()">开始学习 · Bắt đầu học →</button>
+    <div class="cover-note">使用方向键 ← → 或底部按钮切换页面 · 点击卡片翻面查看答案</div>
+  </div>
+</div>
+
+<!-- ===== 前置图片页 1：替换为你的图片 URL ===== -->
+<div class="page image-only-page" id="page-image-1">
+  <div class="image-only-frame"><img src="https://private-user-images.githubusercontent.com/332576698/670186323-da442012-8544-43fe-99c4-57dad718be2f.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3OTE1OTM5NzIsIm5iZiI6MTc5MTU5MzY3MiwicGF0aCI6Ii8zMzI1NzY2OTgvNjcwMTg2MzIzLWRhNDQyMDEyLTg1NDQtNDNmZS05OWM0LTU3ZGFkNzE4YmUyZi5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYxMDEwJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MTAxMFQwMDU0MzJaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1hZWEzZGM3ODEyZTM2MmE3NmY4ZmEyNTc1MWE3ZjRiOGRhYTgwMDY3MTAyYWZlZWM5YmU5ZWRiODAzMWFlZDYwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9aW1hZ2UlMkZwbmcifQ.qMOfQ-t5eL7eAFeTzNLSFMPel3f4YQtnjDu61dN1YQE" /></div>
+</div>
+
+<!-- ===== 前置图片页 2：替换为你的图片 URL ===== -->
+<div class="page image-only-page" id="page-image-2">
+  <div class="image-only-frame"><img src="https://private-user-images.githubusercontent.com/332576698/670186784-27ba66a7-3e5f-4a84-a1db-1aa8ceec57dd.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3OTE1OTQwNjIsIm5iZiI6MTc5MTU5Mzc2MiwicGF0aCI6Ii8zMzI1NzY2OTgvNjcwMTg2Nzg0LTI3YmE2NmE3LTNlNWYtNGE4NC1hMWRiLTFhYThjZWVjNTdkZC5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYxMDEwJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MTAxMFQwMDU2MDJaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1kYzBmMjdkZmY2NWU3MDgwZTc2MGMyMWRhNjViNTFlMTE0NzYyMmIyZTcxZmExOTcyMDAxMzhkNzliN2M0MTJhJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9aW1hZ2UlMkZwbmcifQ.XOzootDkW76UQUFthlyfIJq-83bNn5d7QXtO0gG16mY" /></div>
+</div>
+
+<!-- ===== 前置图片页 3：替换为你的图片 URL ===== -->
+<div class="page image-only-page" id="page-image-3">
+  <div class="image-only-frame"><img src="https://private-user-images.githubusercontent.com/332576698/670187720-85ba72d5-96e2-45de-a5b4-a0f3fecf62eb.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3OTE1OTQzODQsIm5iZiI6MTc5MTU5NDA4NCwicGF0aCI6Ii8zMzI1NzY2OTgvNjcwMTg3NzIwLTg1YmE3MmQ1LTk2ZTItNDVkZS1hNWI0LWEwZjNmZWNmNjJlYi5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYxMDEwJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MTAxMFQwMTAxMjRaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1lNGYxN2NlOGRjYjhhNzBmYTE1ZTE2MWZiNmY4OTMwOTRiOWFhMWFhYTRlMDFjMTI4ODhjOTJiYjIwZmYwYTBmJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9aW1hZ2UlMkZwbmcifQ.Klj2-7LTFJlsSlpv0b5WdHjJuuktY4RjZsenHU6rtfw" /></div>
+</div>
+
+<!-- ===== 前置图片页 4：替换为你的图片 URL ===== -->
+<div class="page image-only-page" id="page-image-4">
+  <div class="image-only-frame"><img src="https://private-user-images.githubusercontent.com/332576698/670188918-b4b1428b-8879-46a2-828d-41cff8eb45f1.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3OTE1OTQ1MTksIm5iZiI6MTc5MTU5NDIxOSwicGF0aCI6Ii8zMzI1NzY2OTgvNjcwMTg4OTE4LWI0YjE0MjhiLTg4NzktNDZhMi04MjhkLTQxY2ZmOGViNDVmMS5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYxMDEwJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MTAxMFQwMTAzMzlaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT01ZDk5OGRlMDRjYzJhNTFhNTlkNTlmYjUyZDMzMmMzZDdkMDEwNzY1MzI5YTgzMTRiMmY2MzJjZTNkYTY2MjkyJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9aW1hZ2UlMkZwbmcifQ.4Tgyj4BO4FPMz2NhSYM7Fd8ZYXE0q0ogAgDjSDRUO84" /></div>
+</div>
+
+<!-- ===== 前置图片页 5：替换为你的图片 URL ===== -->
+<div class="page image-only-page" id="page-image-5">
+  <div class="image-only-frame"><img src="https://private-user-images.githubusercontent.com/332576698/670189472-8a8ccca1-760c-4bb8-96a6-8f1619dabbf7.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3OTE1OTQ2MzIsIm5iZiI6MTc5MTU5NDMzMiwicGF0aCI6Ii8zMzI1NzY2OTgvNjcwMTg5NDcyLThhOGNjY2ExLTc2MGMtNGJiOC05NmE2LThmMTYxOWRhYmJmNy5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYxMDEwJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MTAxMFQwMTA1MzJaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1lODljOGU3MGRiYzQyYzI2MWIzYTg3MmMwZTI5OTk5ZTQyODVkMDlhOGRlMmVlMTg1MWUzMjY0N2Y5NWNhZjk3JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9aW1hZ2UlMkZwbmcifQ.fP82X0rgdOHUzhEU__MDtll8o_cYv43vgZWeRxb8M2s" /></div>
+</div>
+
+<!-- ===== 前置图片页 6：替换为你的图片 URL ===== -->
+<div class="page image-only-page" id="page-image-6">
+  <div class="image-only-frame"><img src="https://private-user-images.githubusercontent.com/332576698/670190098-050807e8-5750-4187-a1de-bd8f9833aed4.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3OTE1OTQ3MzksIm5iZiI6MTc5MTU5NDQzOSwicGF0aCI6Ii8zMzI1NzY2OTgvNjcwMTkwMDk4LTA1MDgwN2U4LTU3NTAtNDE4Ny1hMWRlLWJkOGY5ODMzYWVkNC5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYxMDEwJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MTAxMFQwMTA3MTlaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT03MjhlNjM2MzQ4MWRjZTZkMWJkY2Y1ZDZjNTYxMzUzNTI2ZDU1NDc4Zjg2ZWM3MjkwODY3ZGZkNTAzZDM5M2E2JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9aW1hZ2UlMkZwbmcifQ.-5cck-gAPSLr3qNFAUuLlrqFs2wv65cY-mdMlPC_lJY" /></div>
+</div>
+
+<!-- ===== 页面 1：珍珠奶茶 ===== -->
+<div class="page active" id="page-0">
+  <div class="card" onclick="this.classList.toggle('flipped')">
+    <div class="countdown"></div>
+    <div class="card-inner">
+      <div class="face">
+        <div class="img-box has-img">
+          <div class="ph">📷 点击/替换<br>珍珠奶茶 图片</div>
+          <img alt="珍珠奶茶" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRk23VG6oQ1PD-8XA3i8j58LNcJEar5TgxeukE1JoiJ7N3A-bJfGm54opSI&s=10" />
+        </div>
+        <div class="content">
+          <div>
+            <div class="title">珍珠奶茶</div>
+            <div class="pinyin">Zhēnzhū nǎichá</div>
+          </div>
+          <div class="badges">
+            <span class="badge b-sugar">🧂 30% 糖</span>
+            <span class="badge b-ice">🧊 30% 冰</span>
+          </div>
+          <div class="hint">你会怎么点？试着说完整的一句话。</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div class="target-label">TARGET ANSWER 🥳 </div>
+        <div class="target-sentence">我要一杯珍珠奶茶，<span style="color:#EB5757">微</span>糖<span style="color:#1769AA">微</span>冰。 <br>wǒ yào yì bèi nǎi chá,<span style="color:#EB5757">wèi</span> táng <span style="color:#1769AA">wèi</span> bìng。
+                                    </div> 
+               <div class="flip-tip">↺ 点击返回</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 页面 2：柠檬红茶 ===== -->
+<div class="page" id="page-1">
+  <div class="card" onclick="this.classList.toggle('flipped')">
+    <div class="countdown"></div>
+    <div class="card-inner">
+      <div class="face">
+        <div class="img-box has-img">
+          <div class="ph">📷 点击/替换<br>柠檬红茶 图片</div>
+          <img alt="柠檬红茶" src="https://cdn.tgdd.vn/2021/05/CookRecipe/GalleryStep/thanh-pham-1025.jpg" />
+        </div>
+        <div class="content">
+          <div>
+            <div class="title">柠檬红茶</div>
+            <div class="pinyin">Níngméng hóngchá</div>
+          </div>
+          <div class="badges">
+            <span class="badge b-sugar">🧂 50% 糖</span>
+            <span class="badge b-ice">🧊 0% 冰</span>
+          </div>
+          <div class="hint">泡奶茶时，0% 冰真的是一点冰也没加吗？</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div class="target-label">TARGET ANSWER</div>
+        <div class="target-sentence">我要一杯柠檬红茶，<span style="color:#EB5757">半</span>糖<span style="color:#1769AA">去</span>冰。<br>Wǒ yào yì bēi níngméng hóngchá,<span style="color:#EB5757">bàn</span> táng<span style="color:#1769AA">qù</span> bīng.</div>
+        <div class="flip-tip">↺ 点击返回</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 页面 3：宫保鸡丁 ===== -->
+<div class="page" id="page-2">
+  <div class="card" onclick="this.classList.toggle('flipped')">
+    <div class="countdown"></div>
+    <div class="card-inner">
+      <div class="face">
+        <div class="img-box has-img">
+          <div class="ph">📷 点击/替换<br>宫保鸡丁 图片</div>
+          <img alt="宫保鸡丁" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTKjc-YmYBJLnu2XtlH_X_eg4YVKdvR18sUL_QLKWn2un2apBjuCbEu3lga&s=10" />
+        </div>
+        <div class="content">
+          <div>
+            <div class="title">宫保鸡丁</div>
+            <div class="pinyin">Gōngbǎo jīdīng</div>
+          </div>
+          <div class="badges">
+            <span class="badge b-oil">🧴 油</span>
+            <span class="badge b-spicy">🌶️🌶️🌶️ 辣</span>
+            <span class="badge b-green">🚫🌿 香菜</span>
+          </div>
+          <div class="hint">想象你在餐厅点菜：油要少一点，辣多一点，香菜不要放</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div class="target-label">TARGET ANSWER</div>
+        <div class="target-sentence">"我要一份宫保鸡丁，请<span style="color:#D9A900">少</span>油、<span style="color:#D93636">特</span>辣、<span style="color:#219653">不放</span>香菜。<br> Wǒ yào yí fèn Gōngbǎo jīdīng, qǐng <span style="color:#D9A900">shǎo</span>yóu, <span style="color:#D93636">tè</span>là, <span style="color:#219653">bùfàng</span> xiāngcài."</div>
+        <div class="flip-tip">↺ 点击返回</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 页面 4：兰州拉面 ===== -->
+<div class="page" id="page-3">
+  <div class="card" onclick="this.classList.toggle('flipped')">
+    <div class="countdown"></div>
+    <div class="card-inner">
+      <div class="face">
+        <div class="img-box has-img">
+          <div class="ph">📷 点击/替换<br>兰州拉面 图片</div>
+          <img alt="兰州拉面" src="https://www.ourchinastory.com/images/content/delicious-trend/2022/09/%E8%98%AD%E5%B7%9E%E7%89%9B%E8%82%89%E9%BA%B5%EF%BC%8D%E8%B1%8E%E5%9C%96_x1.jpg" />
+        </div>
+        <div class="content">
+          <div>
+            <div class="title">兰州拉面</div>
+            <div class="pinyin">Lánzhōu lāmiàn</div>
+          </div>
+          <div class="badges">
+            <span class="badge b-green">🧂</span>
+            <span class="badge b-sour">🥬🥬🥬</span>
+            <span class="badge b-spicy">🚫🌶️</span>
+          </div>
+          <div class="hint">"清淡少盐"更自然</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div class="target-label">TARGET ANSWER</div>
+        <div class="target-sentence"><div class="target-sentence">
+  我要一份兰州拉面，请<span style="color:#2F80ED;">清淡少盐</span>、<span style="color:#27AE60;">多放</span>葱、<span style="color:#EB5757;">不放</span>辣。<br>
+  Wǒ yào yí fèn Lánzhōu lāmiàn, qǐng <span style="color:#2F80ED;">qīngdàn shǎo yán</span>, <span style="color:#27AE60;">duō fàng </span>cōng, <span style="color:#EB5757;">bù fàng </span>là.
+</div></div>
+        <div class="flip-tip">↺ 点击返回</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 页面 5：菲力牛排 ===== -->
+<div class="page" id="page-4">
+  <div class="card" onclick="this.classList.toggle('flipped')">
+    <div class="countdown"></div>
+    <div class="card-inner">
+      <div class="face">
+        <div class="img-box has-img">
+          <div class="ph">📷 点击/替换<br>菲力牛排 图片</div>
+          <img alt="菲力牛排" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQHBG3OLezA31mrb1radXtX_L3wnFdxeBlJvps2fwIP0JKBI0Z4FRg-nbkI&s=10" />
+        </div>
+        <div class="content">
+          <div>
+            <div class="title">菲力牛排</div>
+            <div class="pinyin">Fēilì niúpái</div>
+          </div>
+          <div class="badges">
+            <span class="badge b-green">🥩 Medium Well</span>
+          </div>
+          <div class="hint">牛排要比较熟，但里面还保留一点粉红色，怎么说？</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div class="target-label">TARGET ANSWER</div>
+        <div class="target-sentence">我要一份菲力牛排，<span style="color:#EB5757;">七分熟</span>。<br>Wǒ yào yí fèn fēilì niúpái, <span style="color:#EB5757;">qī fēn shú</span>.</div>
+        <div class="flip-tip">↺ 点击返回</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 页面 6：麻婆豆腐 ===== -->
+<div class="page" id="page-5">
+  <div class="card" onclick="this.classList.toggle('flipped')">
+    <div class="countdown"></div>
+    <div class="card-inner">
+      <div class="face">
+        <div class="img-box has-img">
+          <div class="ph">📷 点击/替换<br>麻婆豆腐 图片</div>
+          <img alt="麻婆豆腐" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6yO0X27OrBCx9auzjSe59EAMVrwiSSfFnDDaEQDm57A&s=10" />
+        </div>
+        <div class="content">
+          <div>
+            <div class="title">麻婆豆腐</div>
+            <div class="pinyin">Mápó dòufu</div>
+          </div>
+          <div class="badges">
+            <span class="badge b-spicy">🌶️🌶️🌶️🌶️</span>
+            <span class="badge b-green">🧄🧄🧄🧄</span>
+          </div>
+          <div class="hint">辣度最高级用"大辣"</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div class="target-label">TARGET ANSWER</div>
+        <div class="target-sentence"><div class="target-sentence">我要一份麻婆豆腐，请做<span style="color:#2F80ED;">大辣</span>、<span style="color:#27AE60;">多放蒜末</span>。<br>Wǒ yào yí fèn mápó dòufu, qǐng zuò <span style="color:#2F80ED;">dà là</span>, <span style="color:#27AE60;">duō fàng suànmò</span>.</div></div>
+        <div class="flip-tip">↺ 点击返回</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 页面 7：课程总结与巩固 ===== -->
+<div class="teacher-page" id="page-6">
+  <div class="teacher">
+    <h3>🎯 课程总结与巩固</h3>
+
+    <strong>一、重点词汇回顾</strong><br>
+    • 甜度：微糖、半糖、全糖<br>
+    • 冰量：少冰、微冰、去冰<br>
+    • 辣度：不辣、微辣、中辣、大辣<br>
+    • 口味与配料：少油、少盐、多放蒜、不放香菜<br>
+    • 牛排熟度：三分熟、五分熟、七分熟、全熟<br><br>
+
+    <strong>二、核心句型</strong><br>
+    • 我要一杯奶茶，微糖、去冰。<br>
+    • 我要一份牛排，七分熟。<br>
+    • 请少放一点油。<br>
+    • 可以多放一点蒜吗？<br>
+    • 不要放香菜，谢谢。<br><br>
+ 
+    <strong>💡 学习目标</strong><br>
+    能够用中文点餐，并根据个人喜好表达对甜度、冰量、辣度、配料和牛排熟度的要求。
+  </div>
+</div>
+<!-- ===== 页面8：点餐挑战 ===== -->
+<div class="game-page" id="page-7">
+  <div class="game-box">
+    <div class="game-title">🎮 点餐挑战 · 点对了吗？</div>
+    <div class="game-progress" id="gameProgress">第 1 / 6 题</div>
+
+    <div class="game-food" id="gameFood">🧋</div>
+    <div class="game-question" id="gameQuestion">
+      客人想要微糖、去冰，应该怎么说？
+    </div>
+
+    <div class="game-options" id="gameOptions"></div>
+    <div class="game-feedback" id="gameFeedback">
+      请选择最合适的一句话！
+    </div>
+
+    <button class="game-next" id="gameNext"
+      onclick="nextQuestion()" disabled>
+      下一题 →
+    </button>
+  </div>
+</div>
+
+<!-- ===== 导航栏 ===== -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="prevPage()">◀ 上一页</button>
+  <div class="page-indicator" id="pageIndicator">1 / 15</div>
+  <button class="nav-btn" id="nextBtn" onclick="nextPage()">下一页 ▶</button>
+</div>
+
+<script>
+  // ===== 页面切换：封面 + 6 张图片 + 原有 8 页 =====
+  let currentPage = 0;
+  const pageIds = [
+    "page-cover",
+    "page-image-1",
+    "page-image-2",
+    "page-image-3",
+    "page-image-4",
+    "page-image-5",
+    "page-image-6",
+    "page-0",
+    "page-1",
+    "page-2",
+    "page-3",
+    "page-4",
+    "page-5",
+    "page-6",
+    "page-7"
+  ];
+  const totalPages = pageIds.length;
+
+  function showPage(index) {
+    if (index < 0 || index >= totalPages) return;
+
+    pageIds.forEach(function (id) {
+      const page = document.getElementById(id);
+      if (page) page.classList.remove("active");
+    });
+
+    const current = document.getElementById(pageIds[index]);
+    if (current) current.classList.add("active");
+
+    const indicator = document.getElementById("pageIndicator");
+    if (indicator) indicator.textContent = (index + 1) + " / " + totalPages;
+
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    if (prevBtn) prevBtn.disabled = index === 0;
+    if (nextBtn) nextBtn.disabled = index === totalPages - 1;
+  }
+
+  function nextPage() {
+    if (currentPage < totalPages - 1) {
+      currentPage++;
+      showPage(currentPage);
+    }
+  }
+
+  function prevPage() {
+    if (currentPage > 0) {
+      currentPage--;
+      showPage(currentPage);
+    }
+  }
+
+  function startPresentation() {
+    currentPage = 1;
+    showPage(currentPage);
+  }
+
+  // ===== 点餐挑战：6道题 =====
+  const gameQuestions = [
+
+{
+  food: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsH1_nQih-lsayR3-tbVsL0o9TygR4-JenSPLLJBFcrO7pJVHD-lKfG4Y&s=10",
+  question: "你不喜欢喝太甜的饮料，也不喜欢喝太冰的饮料。你应该怎么说？",
+  options: [
+    "A. 我要一杯奶茶，半糖、少冰。",
+    "B. 我要一杯奶茶，微糖、去冰。",
+    "C. 我要一杯奶茶，全糖、正常冰。",
+    "D. 我要一杯奶茶，不放糖、多冰。"
+  ],
+     answer: 1,
+     explanation: "微糖 = ít đường；去冰 = không đá。"
+    },
+    {
+      food: "https://images.openai.com/static-rsc-4/1KAOFvrSUv_POvwCVksviySimLsNCq8e4LgQhvnFPRhQU0ifdVcfq0IVHkRGNIpmC_vzQO_seaYExL2lG78RkM91QKOdw00Em9FQORwAIFclnC7d12UJxrSHveBWIopvWoegpJ00LwBQX_6sVoO7JVMGJMyWpmIvFc7DqutOz9AFkflDutwgIKHhgQbL4H9B?purpose=fullsize",
+      question: "地三鲜，你朋友想少放油，应该怎么说？",
+      options: [
+        "A. 请多放油。",
+        "B. 请不放盐。",
+        "C. 请少放油。",
+        "D. 请多放辣椒。"
+      ],
+      answer: 2,
+      explanation: "少放油 = cho ít dầu."
+    },
+    {
+      food: "https://images.openai.com/static-rsc-4/m4YQARTFRkzpQT1frQ83OakAQ-lHEkW1QNT-Nl9U4BePCAjKRaXrOvchEwid7BIgfLAIkw7ZWgMnI_tucz1-COLvITYKFmk8xJl7jioy4kxKQpUYqab9YJhoRxxlAWWpwIsWjeEZXRcjWkkBwKuc1yCW3QWzyeR5UPPsSw-H6oxATcyRuoCmQ3SfbQzNrOn9?purpose=fullsize",
+      question: "辣子鸡，你妹妹想要比较辣的口味，应该怎么说？",
+      options: [
+        "A. 请做微辣。",
+        "B. 请做中辣。",
+        "C. 请做不辣。",
+        "D. 请做大辣。"
+      ],
+      answer: 3,
+      explanation: "大辣 = rất cay."
+    },
+    {
+      food: "https://images.openai.com/static-rsc-4/DsVpbv6GQoZKIQVKecUzTFuCEkP2v4ajFR_BH1QfJi7y7yZN4z6hrbFOaLDgM8VDskrxi_9Nc23ExBiHz-xJNLpv5ktUb_zKO3x8kgXzdJcSZzK0ObW06YFDAbfyiAoBxrLF4YlBXscAk0K2J17bC058O0ymmm8z3Upxm3uUabX-UQxjSR0wZP6rEFtIYl5k?purpose=fullsize",
+      question: "拉面，你客人不想吃香菜，你应该怎么说？",
+      options: [
+        "A. 请多放香菜。",
+        "B. 请不放香菜。",
+        "C. 请多放葱。",
+        "D. 请少放油。"
+      ],
+      answer: 1,
+      explanation: "不放香菜 = không cho rau mùi."
+    },
+    {
+      food: "https://images.openai.com/static-rsc-4/wrNu8kS9Pw2CMzcPxmlgFqfpQkJ61NY-GMaUE55gdR_S_5WzLYu1ogKG6q69dywsWCnrI1JgRbYYyY-zR1azaPhse45516EdpkTH6Yphs896XluEESxbKekeVtBGgJXtRoLEkkrSxBuASHHX13pKPNcKtehFi7pXvC4ZV1Uc6ZoJj6hwI5KuE4amED_td7Ne?purpose=fullsize",
+      question: "牛排，你想要大部分熟透，中心略带粉红色的牛排，应该怎么说？",
+      options: [
+        "A. 我要一份牛排，七分熟。",
+        "B. 我要一份牛排，全熟。",
+        "C. 我要一份牛排，五分熟。",
+        "D. 我要一份牛排，不放辣。"
+      ],
+      answer: 0,
+      explanation: "七分熟 = bít tết chín khoảng 70% Kết cấu: Chắc hơn mức 五分熟 (chín vừa), ít mọng nước hơn và gần với chín kỹ."
+    },
+    {
+      food: "https://images.openai.com/static-rsc-4/jpRxj6A8IlKHwGX9g7lS0OKPTDC7LX9n8D8heA6Z67xzyvSHZ-pHEbFvF7-BkGqyZSP6EXDiwr_aeTxY6Hkk643sCJuvJAGRx01xpHmbXAYH8XMc7u3xGU9QMiwao_HkdC6wBpyNood1V8EWQKc84oDYfU5zRp-TFIDEWK5-bGxwst-vpxhFYEjXn_Ot1T1h?purpose=fullsize",
+      question: "蒜蓉粉丝蒸虾，你同学想多放蒜末，应该怎么说？",
+      options: [
+        "A. 请少放蒜末。",
+        "B. 请不放蒜末。",
+        "C. 请多放蒜末。",
+        "D. 请少放盐。"
+      ],
+      answer: 2,
+      explanation: "多放蒜末 = cho thêm tỏi băm."
+    }
+  ];
+
+  let gameIndex = 0;
+  let gameScore = 0;
+  let gameAnswered = false;
+
+  // ===== 显示题目 =====
+  function renderQuestion() {
+    const q = gameQuestions[gameIndex];
+
+    const progress = document.getElementById("gameProgress");
+    const foodBox = document.getElementById("gameFood");
+    const questionBox = document.getElementById("gameQuestion");
+    const feedback = document.getElementById("gameFeedback");
+    const optionsBox = document.getElementById("gameOptions");
+    const nextBtn = document.getElementById("gameNext");
+
+    if (!progress || !foodBox || !questionBox ||
+        !feedback || !optionsBox || !nextBtn) {
+      console.error("找不到游戏所需的 HTML 元素，请检查对应的 id。");
+      return;
+    }
+
+    progress.textContent =
+      `第 ${gameIndex + 1} / ${gameQuestions.length} 题｜得分：${gameScore}`;
+
+    // 图片 URL 显示为图片；其他内容显示为 emoji
+    if (/^https?:\/\//i.test(q.food)) {
+      foodBox.innerHTML = "";
+
+      const img = document.createElement("img");
+      img.src = q.food;
+      img.alt = "Food";
+      img.style.width = "min(300px, 80%)";
+      img.style.height = "180px";
+      img.style.objectFit = "cover";
+      img.style.borderRadius = "16px";
+      img.onerror = function () {
+        foodBox.textContent = "图片加载失败，请检查图片链接";
+      };
+
+      foodBox.appendChild(img);
+    } else {
+      foodBox.textContent = q.food;
+    }
+
+    questionBox.textContent = q.question;
+    feedback.textContent = "请选择最合适的一句话！";
+
+    optionsBox.innerHTML = "";
+    gameAnswered = false;
+
+    q.options.forEach((option, index) => {
+      const btn = document.createElement("button");
+      btn.className = "game-option";
+      btn.textContent = option;
+      btn.onclick = () => checkAnswer(index, btn);
+      optionsBox.appendChild(btn);
+    });
+
+    nextBtn.disabled = true;
+    nextBtn.textContent =
+      gameIndex === gameQuestions.length - 1
+        ? "查看成绩 🏆"
+        : "下一题 →";
+
+    nextBtn.onclick = nextQuestion;
+  }
+
+  // ===== 检查答案 =====
+  function checkAnswer(selected, selectedButton) {
+    if (gameAnswered) return;
+
+    gameAnswered = true;
+
+    const q = gameQuestions[gameIndex];
+    const buttons = document.querySelectorAll(
+      "#gameOptions .game-option"
+    );
+
+    buttons.forEach(btn => {
+      btn.disabled = true;
+    });
+
+    if (selected === q.answer) {
+      gameScore++;
+      selectedButton.classList.add("correct");
+      document.getElementById("gameFeedback").textContent =
+        "✅ 回答正确！" + q.explanation;
+    } else {
+      selectedButton.classList.add("wrong");
+
+      if (buttons[q.answer]) {
+        buttons[q.answer].classList.add("correct");
+      }
+
+      document.getElementById("gameFeedback").textContent =
+        "❌ 再记一记！" + q.explanation;
+    }
+
+    document.getElementById("gameProgress").textContent =
+      `第 ${gameIndex + 1} / ${gameQuestions.length} 题｜得分：${gameScore}`;
+
+    document.getElementById("gameNext").disabled = false;
+  }
+
+  // ===== 下一题 =====
+  function nextQuestion() {
+    if (!gameAnswered) return;
+
+    if (gameIndex < gameQuestions.length - 1) {
+      gameIndex++;
+      renderQuestion();
+    } else {
+      showGameResult();
+    }
+  }
+
+  // ===== 显示最终成绩 =====
+  function showGameResult() {
+    document.getElementById("gameProgress").textContent =
+      "挑战结束！";
+
+    document.getElementById("gameFood").textContent =
+      gameScore >= 5 ? "🎉" : gameScore >= 3 ? "👏" : "💪";
+
+    document.getElementById("gameQuestion").textContent =
+      `你答对了 ${gameScore} / ${gameQuestions.length} 题！`;
+
+    document.getElementById("gameOptions").innerHTML = "";
+
+    document.getElementById("gameFeedback").textContent =
+      gameScore === 6
+        ? "太棒了！你是点餐小达人！"
+        : gameScore >= 4
+        ? "做得不错！再练习一下会更好！"
+        : "别灰心！复习词语后再挑战一次吧！";
+
+    const nextBtn = document.getElementById("gameNext");
+    nextBtn.disabled = false;
+    nextBtn.textContent = "🔄 再玩一次";
+    nextBtn.onclick = restartGame;
+  }
+
+  // ===== 重新开始 =====
+  function restartGame() {
+    gameIndex = 0;
+    gameScore = 0;
+    gameAnswered = false;
+    renderQuestion();
+  }
+
+  // ===== 键盘方向键切换页面 =====
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      nextPage();
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      prevPage();
+    }
+  });
+
+  // ===== 初始化 =====
+  renderQuestion();
+  showPage(0);
+</script>
+</body>
+</html>
